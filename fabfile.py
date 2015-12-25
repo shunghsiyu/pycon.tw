@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 
+import functools
 import os
 import sys
 
-from fabric.api import cd, run, sudo, lcd, local
+from fabric.api import cd, lcd, local, run, settings, sudo
 from fabric.api import task
 from fabric.api import env
 
@@ -65,22 +66,6 @@ def deploy():
     restart_services()
 
 
-def write_transifex_config():
-    """Used to setup Travis for Transifex push.
-    """
-    transifexrc_path = os.path.expanduser('~/.transifexrc')
-    if os.path.exists(transifexrc_path):
-        return
-    with open(transifexrc_path, 'w') as f:
-        f.write((
-            '[https://www.transifex.com]\n'
-            'hostname = https://www.transifex.com\n'
-            'password = {password}\n'
-            'token = \n'
-            'username = pycontw\n'
-        ).format(password=os.environ['TRANSIFEX_PASSWORD']))
-
-
 @task
 def pull_transifex():
     with lcd('src'):
@@ -89,24 +74,113 @@ def pull_transifex():
 
 
 @task
-def push_transifex():
+def push_transifex(source=True, translation=True):
     with lcd('src'):
         local('python manage.py makemessages -a')
-        local('tx push -s')
+
+        push_cmd_parts = ['tx', 'push']
+        if source:
+            push_cmd_parts.append('-s')
+        if translation:
+            push_cmd_parts.append('-t')
+        local(' '.join(push_cmd_parts))
+
+
+##############################
+# Scripts used on Travis CI. #
+##############################
+
+
+def setup_transifex(f):
+
+    @functools.wraps(f)
+    def wrapped(*args, **kwargs):
+        transifexrc_path = os.path.expanduser('~/.transifexrc')
+        if not os.path.exists(transifexrc_path):
+            with open(transifexrc_path, 'w') as f:
+                f.write((
+                    '[https://www.transifex.com]\n'
+                    'hostname = https://www.transifex.com\n'
+                    'password = {password}\n'
+                    'token = \n'
+                    'username = pycontw\n'
+                ).format(password=os.environ['TRANSIFEX_PASSWORD']))
+        f(*args, **kwargs)
+
+    return wrapped
+
+
+def setup_git(f):
+
+    @functools.wraps(f)
+    def wrapped(*args, **kwargs):
+        local('git config user.name "Travis CI"')
+        local('git config user.email "travis-ci@pycon.tw"')
+
+        netrc_path = os.path.expanduser('~/.netrc')
+        if not os.path.exists(netrc_path):
+            with open(netrc_path, 'w') as f:
+                f.write(
+                    ('machine github.com\n'
+                     '    login {user}\n'
+                     '    password {password}\n').format(
+                        user=os.environ['GITHUB_USERNAME'],
+                        password=os.environ['GITHUB_PASSWORD'],
+                    ),
+                )
+        f(*args, **kwargs)
+
+    return wrapped
+
+
+def restrict_branch(branch, *, no_pr=True):
+
+    def _restrict_branch_inner(f):
+
+        @functools.wraps(f)
+        def wrapped(*args, **kwargs):
+            current = os.getenv('TRAVIS_BRANCH')
+            if current != branch:
+                print('Branch {cur} is not {target}. '
+                      'Transifex push skipped.'.format(
+                          cur=current, target=branch),
+                      file=sys.stderr)
+                return
+            if no_pr and os.getenv('TRAVIS_PULL_REQUEST') != 'false':
+                print('Build triggered by a pull request. '
+                      'Transifex push skipped.', file=sys.stderr)
+                return
+            f(*args, **kwargs)
+
+        return wrapped
+
+    return _restrict_branch_inner
 
 
 @task
+@restrict_branch('master')
+@setup_transifex
 def travis_push_transifex():
-    if os.getenv('TRAVIS_PULL_REQUEST') != 'false':
-        print('Build triggered by a pull request. Transifex push skipped.',
-              file=sys.stderr)
-        return
-    current_branch = os.getenv('TRAVIS_BRANCH')
-    target_branch = 'master'
-    if current_branch != target_branch:
-        print('Branch {cur} is not {target}. Transifex push skipped.'.format(
-            cur=current_branch, target=target_branch,
-        ), file=sys.stderr)
-        return
-    write_transifex_config()
     push_transifex()
+
+
+@task
+@restrict_branch('master')
+@setup_transifex
+@setup_git
+def travis_pull_transifex():
+    pull_transifex()
+    local('git add src/locale/')
+    with settings(warn_only=True):
+        r = local('git commit -m "Update translations [skip travis]"')
+    if r.failed:    # Most likely because of an empty commit.
+        return
+
+    r = local('git remote 2>/dev/null | head -n1', capture=True).strip()
+
+    # Ignore failed push since we can always wait for another build,
+    # or just pull translations manually.
+    with settings(warn_only=True):
+        local('git push {remote} {branch}'.format(
+            remote=str(r), branch=os.environ['TRAVIS_BRANCH'],
+        ))
