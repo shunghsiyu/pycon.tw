@@ -91,9 +91,9 @@ def push_transifex(source=True, translation=True):
 ##############################
 
 
-def setup_transifex(f):
+def setup_transifex(func):
 
-    @functools.wraps(f)
+    @functools.wraps(func)
     def wrapped(*args, **kwargs):
         transifexrc_path = os.path.expanduser('~/.transifexrc')
         if not os.path.exists(transifexrc_path):
@@ -105,14 +105,14 @@ def setup_transifex(f):
                     'token = \n'
                     'username = pycontw\n'
                 ).format(password=os.environ['TRANSIFEX_PASSWORD']))
-        f(*args, **kwargs)
+        func(*args, **kwargs)
 
     return wrapped
 
 
-def setup_git(f):
+def setup_git(func):
 
-    @functools.wraps(f)
+    @functools.wraps(func)
     def wrapped(*args, **kwargs):
         local('git config user.name "Travis CI"')
         local('git config user.email "travis-ci@pycon.tw"')
@@ -128,7 +128,7 @@ def setup_git(f):
                         password=os.environ['GITHUB_PASSWORD'],
                     ),
                 )
-        f(*args, **kwargs)
+        func(*args, **kwargs)
 
     return wrapped
 
