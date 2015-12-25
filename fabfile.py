@@ -165,7 +165,7 @@ def travis_push_transifex():
 
 
 @task
-@restrict_branch('master')
+@restrict_branch('travis-tx-commit')
 @setup_transifex
 @setup_git
 def travis_pull_transifex():
