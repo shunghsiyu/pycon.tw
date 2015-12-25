@@ -142,13 +142,13 @@ def restrict_branch(branch, *, no_pr=True):
             current = os.getenv('TRAVIS_BRANCH')
             if current != branch:
                 print('Branch {cur} is not {target}. '
-                      'Transifex push skipped.'.format(
-                          cur=current, target=branch),
+                      'Job {jname} skipped.'.format(
+                          cur=current, target=branch, jname=f.__name__),
                       file=sys.stderr)
                 return
             if no_pr and os.getenv('TRAVIS_PULL_REQUEST') != 'false':
                 print('Build triggered by a pull request. '
-                      'Transifex push skipped.', file=sys.stderr)
+                      'Job {} skipped.'.format(f.__name__), file=sys.stderr)
                 return
             f(*args, **kwargs)
 
