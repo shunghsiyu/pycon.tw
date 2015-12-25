@@ -174,6 +174,7 @@ def travis_pull_transifex():
     with settings(warn_only=True):
         r = local('git commit -m "Update translations [skip travis]"')
     if r.failed:    # Most likely because of an empty commit.
+        print(r, file=sys.stderr)
         return
 
     r = local('git remote 2>/dev/null | head -n1', capture=True).strip()
