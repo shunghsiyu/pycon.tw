@@ -161,7 +161,7 @@ def restrict_branch(branch, *, no_pr=True):
 @restrict_branch('master')
 @setup_transifex
 def travis_push_transifex():
-    push_transifex()
+    push_transifex(translation=False)
 
 
 @task
