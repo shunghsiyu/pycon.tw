@@ -170,6 +170,9 @@ def travis_push_transifex():
 @setup_git
 def travis_pull_transifex():
     pull_transifex()
+
+    branch = os.environ['TRAVIS_BRANCH']
+    local('git checkout {branch}'.format(branch=branch))
     with settings(warn_only=True):
         r = local('git commit -am "Update translations [skip travis]"')
     if r.failed:    # Most likely because of an empty commit.
@@ -182,5 +185,5 @@ def travis_pull_transifex():
     # or just pull translations manually.
     with settings(warn_only=True):
         local('git push {remote} {branch}'.format(
-            remote=str(r), branch=os.environ['TRAVIS_BRANCH'],
+            remote=str(r), branch=branch,
         ))
