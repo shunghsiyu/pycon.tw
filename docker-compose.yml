@@ -21,7 +21,8 @@ services:
         python3 manage.py collectstatic --no-input
         wait-for-it db:5432 --timeout=15
         python3 manage.py migrate
-        python3 manage.py runserver 0.0.0.0:8000
+        # The dollar sign need to be escaped in docker-compose.yml
+        gunicorn --bind "$$(hostname -i):8000" pycontw2016.wsgi:application
     restart: always
     environment:
       # Save us from having to type `--setting=pycontw2016.settings.production`
