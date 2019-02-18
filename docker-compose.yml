@@ -1,5 +1,14 @@
 version: "3"
 services:
+  nginx:
+    image: nginx:1.15
+    restart: always
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+      - media_files:/var/www/media:ro
+      - static_files:/var/www/static:ro
+    depends_on:
+      - web
   web:
     build: .
     entrypoint: ''
@@ -9,13 +18,11 @@ services:
       - -c
       - |
         set -o errexit -o nounset -o pipefail
-        # Turn on debug so static files will be served
-        sed 's/^DEBUG = .*/DEBUG = True/' -i pycontw2016/settings/production.py
+        python3 manage.py collectstatic --no-input
+        wait-for-it db:5432 --timeout=15
         python3 manage.py migrate
         python3 manage.py runserver 0.0.0.0:8000
     restart: always
-    ports:
-      - 8000:8000
     environment:
       # Save us from having to type `--setting=pycontw2016.settings.production`
       DJANGO_SETTINGS_MODULE: pycontw2016.settings.production
@@ -25,11 +32,19 @@ services:
       # Not sure about these values below
       EMAIL_URL: smtp+tls://username:password@localhost:25
       DSN_URL: http://127.0.0.1/idontknow
+    volumes:
+      - media_files:/usr/local/app/src/media
+      - static_files:/usr/local/app/src/assets
     depends_on:
       - db
   db:
     image: postgres:9.5
+    restart: always
     environment:
       POSTGRES_DB: pycontw2016
       POSTGRES_USER: pycontw2016
       POSTGRES_PASSWORD: pycontw2016
+
+volumes:
+  media_files:
+  static_files:
