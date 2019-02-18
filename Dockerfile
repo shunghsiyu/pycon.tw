@@ -1,5 +1,6 @@
 FROM python:3.5
 
+ENV PYTHONUNBUFFERED 1
 ENV BASE_DIR /usr/local
 ENV APP_DIR $BASE_DIR/app
 ENV VENV_DIR $BASE_DIR/venv
@@ -7,7 +8,7 @@ ENV VENV_DIR $BASE_DIR/venv
 RUN apt-get update \
  && apt-get install -y wait-for-it \
  && adduser --system --disabled-login docker \
- && mkdir -p "$BASE_DIR" "$APP_DIR" "$VENV_DIR" \
+ && mkdir -p "$BASE_DIR" "$APP_DIR" "$APP_DIR/src/assets" "$APP_DIR/src/media" "$VENV_DIR" \
  && chown -R docker:nogroup "$BASE_DIR" "$APP_DIR" "$VENV_DIR"
 
 USER docker
