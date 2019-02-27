@@ -1,18 +1,9 @@
 version: "3"
 services:
-  nginx:
-    image: nginx:1.15
-    container_name: pycontw-2016
-    hostname: pycontw-2016
-    restart: always
-    volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf
-      - media_files:/var/www/media:ro
-      - static_files:/var/www/static:ro
-    depends_on:
-      - web
   web:
     build: .
+    container_name: pycontw-2016
+    hostname: pycontw-2016
     entrypoint: ''
     command:
       # Hacky script for quick demonstration purpose
@@ -20,17 +11,19 @@ services:
       - -c
       - |
         set -o errexit -o nounset -o pipefail
-        # Enable session cookie and CSRF token over HTTP for demonstration purpose
-        sed 's/^SESSION_COOKIE_SECURE = .*/SESSION_COOKIE_SECURE = False/' -i pycontw2016/settings/production.py
-        sed 's/^CSRF_COOKIE_SECURE = .*/CSRF_COOKIE_SECURE = False/' -i pycontw2016/settings/production.py
         python3 manage.py collectstatic --no-input
         wait-for-it db:5432 --timeout=15
         python3 manage.py migrate
-        # The dollar sign need to be escaped in docker-compose.yml
-        gunicorn --bind "$$(hostname -i):8000" --access-logfile - pycontw2016.wsgi:application
+
+        exec uwsgi --http :8000 \
+          --hook-master-start "unix_signal:1 gracefully_kill_them_all" \
+          --static-map /static=assets \
+          --static-map /media=media \
+          --mount /2016=pycontw2016/wsgi.py \
+          --manage-script-name \
+          --offload-threads 2
     restart: always
     environment:
-      SCRIPT_NAME: "/2016"
       # Save us from having to type `--setting=pycontw2016.settings.production`
       DJANGO_SETTINGS_MODULE: pycontw2016.settings.production
       # Plaintext secrets for demonstration purpose
@@ -41,7 +34,6 @@ services:
       DSN_URL: http://127.0.0.1/idontknow
     volumes:
       - media_files:/usr/local/app/src/media
-      - static_files:/usr/local/app/src/assets
     depends_on:
       - db
   db:
@@ -54,7 +46,6 @@ services:
 
 volumes:
   media_files:
-  static_files:
 
 networks:
   default:
