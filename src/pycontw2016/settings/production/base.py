@@ -13,7 +13,7 @@ import os
 DEBUG = False
 
 # Must mention ALLOWED_HOSTS in production!
-ALLOWED_HOSTS = ['tw.pycon.org']
+ALLOWED_HOSTS = ['tw.pycon.org', 'jneo8.com']
 
 # Cache the templates in memory for speed-up
 TEMPLATES[0]['OPTIONS'].update({"loaders": [
