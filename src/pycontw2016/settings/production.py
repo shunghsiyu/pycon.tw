@@ -7,7 +7,7 @@ import logging.config
 DEBUG = False
 
 # Must mention ALLOWED_HOSTS in production!
-ALLOWED_HOSTS = ['pycontw.krdai.info', 'tw.pycon.org']
+ALLOWED_HOSTS = ['pycontw.krdai.info', 'tw.pycon.org', 'jneo8.com']
 
 # Override static and media URL for prefix in WSGI server.
 # https://code.djangoproject.com/ticket/25598
