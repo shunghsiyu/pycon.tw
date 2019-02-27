@@ -32,5 +32,6 @@ RUN "$VENV_DIR/bin/python3" -m compileall "$APP_DIR/src"
 COPY --chown=docker:nogroup . $APP_DIR
 
 WORKDIR $APP_DIR/src
+VOLUME $APP_DIR/src/media
 EXPOSE 8000
 ENTRYPOINT "$VENV_DIR/bin/python3"
