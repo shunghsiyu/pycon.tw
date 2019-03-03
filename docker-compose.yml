@@ -15,8 +15,9 @@ services:
         wait-for-it db:5432 --timeout=15
         python3 manage.py migrate
 
-        exec uwsgi --http :8000 \
-          --hook-master-start "unix_signal:1 gracefully_kill_them_all" \
+        exec uwsgi --http-socket :8000 \
+          --master
+          --hook-master-start "unix_signal:15 gracefully_kill_them_all" \
           --static-map /static=assets \
           --static-map /media=media \
           --mount /2016=pycontw2016/wsgi.py \
