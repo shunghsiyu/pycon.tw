@@ -1,0 +1,47 @@
+#!/usr/bin/env python
+import os
+import socket
+import sys
+import time
+
+from django.core.management import execute_from_command_line
+import environ
+
+
+DATABASE_CONNECT_TIMEOUT = 15
+
+
+if __name__ == "__main__":
+    # Default to the production setting
+    os.environ.setdefault(
+        'DJANGO_SETTINGS_MODULE',
+        'pycontw2016.settings.production',
+    )
+
+    ignore_setup = os.environ.get('IGNORE_SETUP', False)
+
+    if not ignore_setup:
+        # Move static files
+        execute_from_command_line(['manage.py', 'collectstatic', '--no-input'])
+
+    # Wait until database is up and ready to accept connection
+    env = environ.Env()
+    db_config = env.db()
+    sk = socket.socket()
+    sk.settimeout(DATABASE_CONNECT_TIMEOUT)
+    try:
+        sk.connect((db_config['HOST'],db_config['PORT']))
+    except socket.timeout:
+        print('Fail to connect to database {}'.format(db_config))
+        sys.exit(1)
+    else:
+        sk.shutdown(socket.SHUT_RDWR)
+        sk.close()
+
+    if not ignore_setup:
+        # Run database migration
+        execute_from_command_line(['manage.py', 'migrate'])
+
+    # Start uwsgi and let it replace the current python process
+    os.execvp('uwsgi', sys.argv)
+
