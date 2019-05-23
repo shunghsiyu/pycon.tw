@@ -1,0 +1,55 @@
+version: "3"
+services:
+  web:
+    build: .
+    container_name: pycontw-2018
+    hostname: pycontw-2018
+    entrypoint: ''
+    command:
+      # Hacky script for quick demonstration purpose
+      - bash
+      - -c
+      - |
+        set -o errexit -o nounset -o pipefail
+        python3 manage.py collectstatic --no-input
+        wait-for-it db:5432 --timeout=15
+        python3 manage.py migrate
+
+        pip install django-debug-toolbar==1.9.1
+        exec uwsgi --http-socket :8000 \
+          --master \
+          --hook-master-start "unix_signal:15 gracefully_kill_them_all" \
+          --static-map /static=assets \
+          --static-map /media=media \
+          --mount /2018=pycontw2016/wsgi.py \
+          --manage-script-name \
+          --offload-threads 2
+    restart: always
+    environment:
+      # Save us from having to type `--setting=pycontw2016.settings.production`
+      DJANGO_SETTINGS_MODULE: pycontw2016.settings.production.pycontw2018
+      # Plaintext secrets for demonstration purpose
+      SECRET_KEY: "asjkh98usd98ufasodfsd198easDLSKFJSDLKFJiojewofijDSFLKJ"
+      DATABASE_URL: postgres://pycontw2016:pycontw2016@db:5432/pycontw2016
+      # Not sure about these values below
+      EMAIL_URL: smtp+tls://username:password@localhost:25
+      DSN_URL: http://127.0.0.1/idontknow
+    volumes:
+      - media_files:/usr/local/app/src/media
+    depends_on:
+      - db
+  db:
+    image: postgres:9.5
+    restart: always
+    environment:
+      POSTGRES_DB: pycontw2016
+      POSTGRES_USER: pycontw2016
+      POSTGRES_PASSWORD: pycontw2016
+
+volumes:
+  media_files:
+
+networks:
+  default:
+          #    external:
+          #      name: pycontw-net
