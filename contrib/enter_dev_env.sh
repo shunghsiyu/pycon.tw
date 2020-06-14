@@ -1,6 +1,7 @@
 #!/bin/bash -xe
+DIR="$(dirname $0)"
 CONTAINER="${USER}_pycontw_vm"
-COMPOSE_FILE="./docker-compose-dev.yml"
+COMPOSE_FILE="${DIR}/docker-compose-dev.yml"
 START_SHELL="sh"
 
 # test if the container is running
