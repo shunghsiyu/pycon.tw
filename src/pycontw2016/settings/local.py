@@ -12,7 +12,9 @@ import sys
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-INTERNAL_IPS = ['127.0.0.1', 'localhost']
+DEBUG_TOOLBAR_CONFIG = {
+    'SHOW_TOOLBAR_CALLBACK': lambda _: True,
+}
 
 # Turn off debug while imported by Celery with a workaround
 # See http://stackoverflow.com/a/4806384
